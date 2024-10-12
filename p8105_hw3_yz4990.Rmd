@@ -11,12 +11,13 @@ library(tidyverse)
 ```
 
 
-
+## Problem 2
 ```{r}
 demo_df = read_csv("./data/nhanes_covar.csv", 
                    na = "NA", 
                    skip = 4) |> 
-  janitor::clean_names()
+  janitor::clean_names() |> 
+  drop_na()
 
 
 mims_df = read_csv("./data/nhanes_accel.csv", 
@@ -26,17 +27,43 @@ mims_df = read_csv("./data/nhanes_accel.csv",
   janitor::clean_names() |> 
   pivot_longer(
     cols = min1:min1440,
-    names_to = "interval", 
+    names_to = "interval_min", 
+    names_prefix = "min", 
     values_to = "mims"
   )
 
-acce_df = left_join(mims_df, demo_df, by = "seqn")
+acce_df = full_join(mims_df, demo_df, by = "seqn") |> 
+  mutate(
+    sex = as.factor(sex),
+    education = as.factor(education)
+  ) |> 
+  filter(age >= 21)
 
 ```
 
-
+reader-friendly table of Number of Men and Women in Each Education Category
 ```{r}
+gender_table = acce_df |> 
+  select(education, sex) |> 
+  group_by(education) |> 
+  count(education, sex) |> 
+  
+  pivot_wider(
+    names_from = "sex",
+    values_from = "n"
+  ) |> 
+  group_by(education) |> 
+  mutate(
+    education = factor(education, 
+                       levels = c(1, 2, 3), 
+                       labels = c("Less than high school", 
+                         "High school equivalent", 
+                         "More than high school"))
+  ) |> 
+  rename(Male = "1", Female = "2")
 
+knitr::kable(gender_table, caption = "Number of Men and Women in Each Education Category")
+  
 ```
 
 
