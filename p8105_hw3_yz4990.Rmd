@@ -17,7 +17,10 @@ demo_df = read_csv("./data/nhanes_covar.csv",
                    na = "NA", 
                    skip = 4) |> 
   janitor::clean_names() |> 
-  drop_na()
+  filter(age >= 21) |> 
+  drop_na() |> 
+  mutate(sex = as.factor(sex),
+    education = as.factor(education))
 
 
 mims_df = read_csv("./data/nhanes_accel.csv", 
@@ -33,17 +36,13 @@ mims_df = read_csv("./data/nhanes_accel.csv",
   )
 
 acce_df = full_join(mims_df, demo_df, by = "seqn") |> 
-  mutate(
-    sex = as.factor(sex),
-    education = as.factor(education)
-  ) |> 
   filter(age >= 21)
 
 ```
 
 reader-friendly table of Number of Men and Women in Each Education Category
 ```{r}
-gender_table = acce_df |> 
+gender_table = demo_df |> 
   select(education, sex) |> 
   group_by(education) |> 
   count(education, sex) |> 
@@ -60,11 +59,119 @@ gender_table = acce_df |>
                          "High school equivalent", 
                          "More than high school"))
   ) |> 
-  rename(Male = "1", Female = "2")
+  rename(Male = "1", Female = "2", Education = "education")
 
 knitr::kable(gender_table, caption = "Number of Men and Women in Each Education Category")
   
 ```
+The table is reader-friendly and shows the number of males and females in each education category. 
+
+
+
+
+
+```{r}
+demo_df |> 
+  select(age, sex, education) |> 
+  ggplot(aes(x = age, fill = sex)) +
+  geom_histogram(binwidth = 10, position = "dodge") +
+  facet_grid(~ education, labeller = as_labeller(c(
+    `1` = "Less than high school",
+    `2` = "High school equivalent",
+    `3` = "More than high school"
+  ))) +
+  scale_fill_discrete(labels = c("Male", "Female")) + 
+  labs(
+    title = "Age Distribution by Sex within Education Levels",
+    x = "Age",
+    y = "Count",
+    fill = "Sex"
+  ) +
+  theme_minimal()
+
+
+
+```
+
+
+
+Density plot of age distribution by sex in each education category
+```{r}
+demo_df |> 
+  select(sex, age, education) |> 
+  ggplot(aes(x = age, fill = sex)) +
+  geom_density(alpha = 0.4, adjust = .5) + 
+  facet_grid(~ education, labeller = 
+               as_labeller(c("1" = "Less than high school",
+                             "2" = "High school equivalent",
+                             "3" = "More than high school"))) +
+  scale_fill_discrete(labels = c("Male", "Female")) + 
+  labs(
+    title = "Age Distribution by Sex within Education Categories",
+    x = "Age",
+    y = "Density",
+    fill = "Sex"
+  ) +
+  theme_minimal() 
+
+```
+This density plot provides the age distributions for men and women in each education category. 
+
+Less than high school: Both male and female in this category show peaks around age 50 and age 70. There is a significant amount of overlaps between male and female, indicating that males and females with a "Less than high school" education have a similar age distribution. 
+
+High school equivalent: The density curve for male shows a peak around age 25 and 55, while the curve for female shows a peak around age 50 and a larger peak around age 80. There is less overlap, indicating there are more age differences between males and females with a "High school equivalent" education. It suggests that younger men are more likely to have a "High school equivalent" education than women, while older women are more likely to have this education than men. 
+
+More than high school: The density curves for both male and female have peaks around age 30, indicating that younger individuals of both gender are more likely to have a higher education. The peak of the female curve is higher than male's, showing that young women are more prominent in this category. Both curves decrease sharply after age 65, indicating fewer older individuals with the "more than high school" education.  
+
+
+aggregate activity data
+```{r}
+total_df = acce_df |> 
+  group_by(seqn) |> 
+  summarize(total_activity = sum(mims)) |> 
+  left_join(demo_df, by = "seqn")
+
+```
+
+
+
+plot
+```{r}
+ggplot(total_df, aes(x = age, y = total_activity, color = sex)) +
+  geom_point(alpha = 0.5) +  
+  geom_smooth(se = FALSE) +  
+  facet_grid(~ education, labeller = as_labeller(c(
+    `1` = "Less than high school",
+    `2` = "High school equivalent",
+    `3` = "More than high school"
+  ))) +
+  labs(
+    title = "Total Activity vs Age of Males and Females by Education Level",
+    x = "Age",
+    y = "Total Activity"
+  ) +
+  viridis::scale_color_viridis(name = "Sex", 
+                               labels = c("Male", "Female"), 
+                               discrete = TRUE) + 
+  theme_minimal() + 
+  theme(legend.position = "bottom")
+
+```
+
+
+
+
+```{r}
+
+
+```
+
+
+
+
+
+
+
 
 
 
