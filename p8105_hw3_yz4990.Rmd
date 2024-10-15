@@ -124,7 +124,7 @@ High school equivalent: The density curve for male shows a peak around age 25 an
 More than high school: The density curves for both male and female have peaks around age 30, indicating that younger individuals of both gender are more likely to have a higher education. The peak of the female curve is higher than male's, showing that young women are more prominent in this category. Both curves decrease sharply after age 65, indicating fewer older individuals with the "more than high school" education.  
 
 
-aggregate activity data
+aggregate across minutes to create a total activity variable for each participant
 ```{r}
 total_df = acce_df |> 
   group_by(seqn) |> 
@@ -135,7 +135,7 @@ total_df = acce_df |>
 
 
 
-plot
+plot total activities against age, separate panels for education, include trend line
 ```{r}
 ggplot(total_df, aes(x = age, y = total_activity, color = sex)) +
   geom_point(alpha = 0.5) +  
@@ -146,7 +146,7 @@ ggplot(total_df, aes(x = age, y = total_activity, color = sex)) +
     `3` = "More than high school"
   ))) +
   labs(
-    title = "Total Activity vs Age of Males and Females by Education Level",
+    title = "Total Activity vs Age for Males and Females by Education Level",
     x = "Age",
     y = "Total Activity"
   ) +
@@ -157,31 +157,58 @@ ggplot(total_df, aes(x = age, y = total_activity, color = sex)) +
   theme(legend.position = "bottom")
 
 ```
+The scatter plot provides total activity vs age for males and females by each education level. The plot compares men to women and includes a trend line to illustrate differences in each category. 
+
+Less than high school: Women shows a higher total activity from age 21 to 40 but then surpassed by men after age 40. Men's total activity has a peak around age 60. Both men and women have a sharp decline in total activity after age 60. 
+
+High school equivalent: Both men and women have a peak around age 40 but then declined sharply from age 40 t0 60. Women have higher total activity overall. 
+
+More than high school: Both men and women have a more flat trend line, indicating a slower decline in total activity as age increases. Women have higher total activity overall. 
+
+In general, The plot shows that higher education links with a more stable activity level through different ages. While total activity decreases with age, the rate of decreasing is lower for individuals with higher education.  Women with "less than high school" education are generally less active than men, while women with "high school equivalent" or "more than high school" education are more active than men. 
 
 
-
-
+three-panel plot that shows the 24-hour activity time courses for each education level and use color to indicate sex
 ```{r}
+hour_df = acce_df |> 
+  mutate(
+    hour = pmin(as.numeric(str_extract(interval_min, "\\d+")) %/% 60 + 1, 24)
+    ) |> 
+  group_by(hour, sex, education) |> 
+  summarize(hour_activity = sum(mims, na.rm = TRUE), .groups = "drop")
 
-
+ggplot(hour_df, aes(x = hour, y = hour_activity, color = sex)) +
+  geom_point(alpha = 0.5) +  
+  geom_smooth(se = FALSE) +  
+  facet_grid(~ education, labeller = as_labeller(c(
+    `1` = "Less than high school",
+    `2` = "High school equivalent",
+    `3` = "More than high school"
+  ))) +
+  labs(
+    title = "24-Hour Activity Time Courses for Males and Females by Education Level",
+    x = "Hour",
+    y = "Hourly Activity"
+  ) +
+  viridis::scale_color_viridis(name = "Sex", 
+                               labels = c("Male", "Female"), 
+                               discrete = TRUE) + 
+  theme_minimal() + 
+  theme(legend.position = "bottom") 
+  
 ```
+Less than high school: Women and men in this panel have very similar trends in activity levels through the 24 hours. Both groups show a peak of activity around 12PM and steadily decline afterwards.
+
+High school equivalent: Men in this panel have a slightly higher activity level compared to men with "less than high school" education. However, women in this group have the lowest levels among the 3 education levels. 
+
+More than high school: Both groups in this panel have a significantly higher activity level than the 2 other panels, especially during midday and afternoon. Women have a higher activity level than men overall. 
+
+In general, Men and women in all education panels share a similar activity patterns. The activity levels reach their peak around 12PM, and it then steadily decreases from 3PM to 8PM. 
 
 
-
-
-
-
-
-
-
-
+## Problem 3
 ```{r}
 
-```
-
-
-
-```{r}
 
 ```
 
