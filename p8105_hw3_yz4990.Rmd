@@ -2,7 +2,7 @@
 title: "p8105_hw3_yz4990"
 author: "Yucheng Zhao"
 date: "2024-10-12"
-output: html_document
+output: md_document
 ---
 
 ```{r setup, include=FALSE}
@@ -71,32 +71,6 @@ Less than high school: There are 27 males and 28 females in this category.
 High school equivalent: There are 35 males and 23 females in this catgory. 
 
 More than high school: There are 56 males and 59 females in this category.
-
-
-
-
-```{r}
-demo_df |> 
-  select(age, sex, education) |> 
-  ggplot(aes(x = age, fill = sex)) +
-  geom_histogram(binwidth = 10, position = "dodge") +
-  facet_grid(~ education, labeller = as_labeller(c(
-    `1` = "Less than high school",
-    `2` = "High school equivalent",
-    `3` = "More than high school"
-  ))) +
-  scale_fill_discrete(labels = c("Male", "Female")) + 
-  labs(
-    title = "Age Distribution by Sex within Education Levels",
-    x = "Age",
-    y = "Count",
-    fill = "Sex"
-  ) +
-  theme_minimal()
-
-
-
-```
 
 
 
@@ -243,21 +217,8 @@ cb_df = bind_rows(jan_20, july_20, jan_24, july_24) |>
   select(ride_id, rideable_type, weekdays, duration, member_casual, start_end, station_name, month, year)
   
 ```
-pivot_longer(
-    start_station_name:end_station_name,
-    names_to = "start_end",
-    values_to = "station_name"
-  ) |> 
-  mutate(
-    start_end = str_replace(start_end, "start_station_name", "start"),
-    start_end = str_replace(start_end, "end_station_name", "end")
-  ) |> 
-  select(ride_id, rideable_type, weekdays, duration, member_casual, start_end, station_name, month, year)
-  
-  
-  
-  
-  Since the 3 datasets are already in a standard format with no missing values, no additional data cleaning was required. Each dataset initially contains 7 variables, including "ride_id," "rideable_type," "weekdays," "duration," "start_station_name," "end_station_name," and "member_casual." These variables are consistent within each dataset. 
+
+Since the 3 datasets are already in a standard format with no missing values, no additional data cleaning was required. Each dataset initially contains 7 variables, including "ride_id," "rideable_type," "weekdays," "duration," "start_station_name," "end_station_name," and "member_casual." These variables are consistent within each dataset. 
 
 To distinguish the month and year of the rides, I added 2 new columns "month" and "year" to each dataset before combining. After merging the datasets for January and July 2020 and 2024, I changed the combined dataset into a tidy format. The "start_station_name" and "end_station_name" columns are pivoted into 2 new columns "start_end" and "station_name." The "start_end" indicates whether the station is a start or end station for the ride, while the "station_name" contains the name of the corresponding station. 
 
@@ -296,26 +257,8 @@ cb_df |>
   slice(1:5) |> 
   knitr::kable(caption = "The 5 Most Popular Starting Stations for July 2024")
 ```
-demo_df |> 
-  select(age, sex, education) |> 
-  ggplot(aes(x = age, fill = sex)) +
-  geom_histogram(binwidth = 10, position = "dodge") +
-  facet_grid(~ education, labeller = as_labeller(c(
-    `1` = "Less than high school",
-    `2` = "High school equivalent",
-    `3` = "More than high school"
-  ))) +
-  scale_fill_discrete(labels = c("Male", "Female")) + 
-  labs(
-    title = "Age Distribution by Sex within Education Levels",
-    x = "Age",
-    y = "Count",
-    fill = "Sex"
-  ) +
-  theme_minimal()
 
-
-Make a plot to investigate the effects of day of the week, month, and year on median ride duration. This plot can include one or more panels, but should facilitate comparison across all variables of interest. Comment on your observations from this plot.
+table of Median Ride Duration by Weekdays, Month, and Year
 ```{r}
 cb_df |> 
   group_by(weekdays, month, year) |> 
@@ -332,24 +275,54 @@ cb_df |>
   viridis::scale_fill_viridis(name = "Weekdays", 
                                discrete = TRUE) + 
   theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+              legend.position = "bottom") 
+```
+The plot shows that the median duration of ride tends to be higher in year 2020 compared to 2024 for both July and January. July has higher median ride duration than January for both years, potentially indicating that people are more willing to ride at warmer days. The highest median ride duration in the weekdays occurs on Saturday and Sunday most of the time, except on January 2024, suggesting that most people tend to take longer rides during the weekends. 
+
+
+
+demo_df |> 
+  select(sex, age, education) |> 
+  ggplot(aes(x = age, fill = sex)) +
+  geom_density(alpha = 0.4, adjust = .5) + 
+  facet_grid(~ education, labeller = 
+               as_labeller(c("1" = "Less than high school",
+                             "2" = "High school equivalent",
+                             "3" = "More than high school"))) +
+  scale_fill_discrete(labels = c("Male", "Female")) + 
+  labs(
+    title = "Age Distribution by Sex within Education Categories",
+    x = "Age",
+    y = "Density",
+    fill = "Sex"
+  ) +
+  theme_minimal() 
+
+There were relatively few electric Citi Bikes in 2020, but many more are available now. For data in 2024, make a figure that shows the impact of month, membership status, and bike type on the distribution of ride duration. Comment on your results.
+```{r}
+cb_df |> 
+  filter(year == "2024") |> 
+  pivot_wider(
+    names_from = start_end,
+    values_from = station_name
+  ) |> 
+  select(month, member_casual, rideable_type, duration) |> 
+  ggplot(aes(x = member_casual, y = duration, fill = rideable_type)) +
+  geom_boxplot(alpha = 0.7) + 
+  facet_grid(~ month)  +
+  labs(
+    title = "Ride Duration by Month, Membership Status, and Bike Type",
+    x = "Membership Status",
+    y = "Ride Duration"
+  ) +
+  viridis::scale_fill_viridis(name = "Bike Type", 
+                               discrete = TRUE) + 
+  theme_minimal() + 
   theme(legend.position = "bottom") 
-```
-
-
-
-
-```{r}
 
 ```
-
-
-
-
-```{r}
-
-```
-
-
+The box plot shows that, regardless the month, type of bike, and member status, most Citi Bike riders have a ride duration between 0 to 25 minutes. However, within every group, there are some outsiders with a much longer duration, from 50 to over 200 minutes. Overall, casual riders tend to have a longer ride duration in both January and July. For classic bikes, the ride duration remain relatively consistent between January and July. However, the ride duration of electric bikes in July is noticeably higher than in January, possibly suggesting that electric bikes may perform better in warmer temperature.  
 
 
 
