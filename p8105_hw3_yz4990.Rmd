@@ -66,6 +66,11 @@ knitr::kable(gender_table, caption = "Number of Men and Women in Each Education 
 ```
 The table is reader-friendly and shows the number of males and females in each education category. 
 
+Less than high school: There are 27 males and 28 females in this category. 
+
+High school equivalent: There are 35 males and 23 females in this catgory. 
+
+More than high school: There are 56 males and 59 females in this category.
 
 
 
@@ -174,11 +179,11 @@ hour_df = acce_df |>
   mutate(
     hour = pmin(as.numeric(str_extract(interval_min, "\\d+")) %/% 60 + 1, 24)
     ) |> 
-  group_by(hour, sex, education) |> 
+  group_by(seqn, hour, sex, education) |> 
   summarize(hour_activity = sum(mims, na.rm = TRUE), .groups = "drop")
 
 ggplot(hour_df, aes(x = hour, y = hour_activity, color = sex)) +
-  geom_point(alpha = 0.5) +  
+  geom_point(alpha = 0.3) +  
   geom_smooth(se = FALSE) +  
   facet_grid(~ education, labeller = as_labeller(c(
     `1` = "Less than high school",
@@ -197,19 +202,137 @@ ggplot(hour_df, aes(x = hour, y = hour_activity, color = sex)) +
   theme(legend.position = "bottom") 
   
 ```
-Less than high school: Women and men in this panel have very similar trends in activity levels through the 24 hours. Both groups show a peak of activity around 12PM and steadily decline afterwards.
+Less than high school: Women and men in this panel have very similar trends in activity levels through the 24 hours. Both groups show a peak of activity around 12PM and steadily decline after 8PM.
 
-High school equivalent: Men in this panel have a slightly higher activity level compared to men with "less than high school" education. However, women in this group have the lowest levels among the 3 education levels. 
+High school equivalent: Both women and men in this panel have a slightly lower activity level compared to individuals with "less than high school" or "more than high school" education. Men in this group have a lower activity level than women. 
 
-More than high school: Both groups in this panel have a significantly higher activity level than the 2 other panels, especially during midday and afternoon. Women have a higher activity level than men overall. 
+More than high school: Overall, women in this panel have a noticeably higher activity level than men, especially during midday and afternoon.
 
-In general, Men and women in all education panels share a similar activity patterns. The activity levels reach their peak around 12PM, and it then steadily decreases from 3PM to 8PM. 
+In general, Men and women in all education panels share a similar activity patterns. The activity levels reach their peak around 12PM and then sharply decreases from 8PM to midnight. 
 
 
 ## Problem 3
+Files contain 1% of all rides with a total duration less than 4 hours in each of four months. Import, clean, and tidy these data, and describe the resulting dataset.
 ```{r}
+jan_20 = read_csv("./data/Jan 2020 Citi.csv") |> 
+  mutate(month = "january",
+         year = 2020)
+
+jan_24 = read_csv("./data/Jan 2024 Citi.csv") |> 
+  mutate(month = "january",
+         year = 2024)
+
+july_20 = read_csv("./data/July 2020 Citi.csv") |> 
+  mutate(month = "july",
+         year = 2020)
+
+july_24 = read_csv("./data/July 2024 Citi.csv") |> 
+  mutate(month = "july",
+         year = 2024)
+
+cb_df = bind_rows(jan_20, july_20, jan_24, july_24) |> 
+  pivot_longer(
+    start_station_name:end_station_name,
+    names_to = "start_end",
+    values_to = "station_name"
+  ) |> 
+  mutate(
+    start_end = str_replace(start_end, "start_station_name", "start"),
+    start_end = str_replace(start_end, "end_station_name", "end")
+  ) |> 
+  select(ride_id, rideable_type, weekdays, duration, member_casual, start_end, station_name, month, year)
+  
+```
+pivot_longer(
+    start_station_name:end_station_name,
+    names_to = "start_end",
+    values_to = "station_name"
+  ) |> 
+  mutate(
+    start_end = str_replace(start_end, "start_station_name", "start"),
+    start_end = str_replace(start_end, "end_station_name", "end")
+  ) |> 
+  select(ride_id, rideable_type, weekdays, duration, member_casual, start_end, station_name, month, year)
+  
+  
+  
+  
+  Since the 3 datasets are already in a standard format with no missing values, no additional data cleaning was required. Each dataset initially contains 7 variables, including "ride_id," "rideable_type," "weekdays," "duration," "start_station_name," "end_station_name," and "member_casual." These variables are consistent within each dataset. 
+
+To distinguish the month and year of the rides, I added 2 new columns "month" and "year" to each dataset before combining. After merging the datasets for January and July 2020 and 2024, I changed the combined dataset into a tidy format. The "start_station_name" and "end_station_name" columns are pivoted into 2 new columns "start_end" and "station_name." The "start_end" indicates whether the station is a start or end station for the ride, while the "station_name" contains the name of the corresponding station. 
 
 
+a reader-friendly table showing the total number of rides in each combination of year and month separating casual riders and Citi Bike members. Comment on these results.
+```{r}
+cb_df |> 
+  group_by(year, month, member_casual) |> 
+  summarise(total_rides = n_distinct(ride_id), .groups = "drop") |> 
+  pivot_wider(
+    names_from = member_casual,
+    values_from = total_rides
+  ) |> 
+  knitr::kable(caption = "Total Number of Rides by Year, Month, and Rider Type")
+```
+The table above shows the total number of rides in each combination of year and month separating casual riders and Citi Bike members. 
+
+In January 2020, there were 984 rides by casual riders and 11436 rides by members in the data. 
+
+In July 2020, there were 5637 rides by casual riders and 15411 rides by members in the data. 
+
+In January 2024, there were 2108 rides by casual riders and 16753 rides by members in the data. 
+
+In July 2024, there were 10894 rides by casual riders and 36262 rides by members in the data. 
+
+
+a table showing the 5 most popular starting stations for July 2024; include the number of rides originating from these stations
+```{r}
+cb_df |>
+  filter(month == "july",
+         year == 2024, 
+         start_end == "start") |> 
+  group_by(station_name) |> 
+  summarize(number_rides = n_distinct(ride_id), .groups = "drop") |>
+  arrange(desc(number_rides)) |> 
+  slice(1:5) |> 
+  knitr::kable(caption = "The 5 Most Popular Starting Stations for July 2024")
+```
+demo_df |> 
+  select(age, sex, education) |> 
+  ggplot(aes(x = age, fill = sex)) +
+  geom_histogram(binwidth = 10, position = "dodge") +
+  facet_grid(~ education, labeller = as_labeller(c(
+    `1` = "Less than high school",
+    `2` = "High school equivalent",
+    `3` = "More than high school"
+  ))) +
+  scale_fill_discrete(labels = c("Male", "Female")) + 
+  labs(
+    title = "Age Distribution by Sex within Education Levels",
+    x = "Age",
+    y = "Count",
+    fill = "Sex"
+  ) +
+  theme_minimal()
+
+
+Make a plot to investigate the effects of day of the week, month, and year on median ride duration. This plot can include one or more panels, but should facilitate comparison across all variables of interest. Comment on your observations from this plot.
+```{r}
+cb_df |> 
+  group_by(weekdays, month, year) |> 
+  summarize(median_duration = median(duration), .groups = "drop") |> 
+  ggplot(aes(x = weekdays, y = median_duration, fill = weekdays)) +
+  geom_col(position = "dodge") +  
+  facet_grid(year ~ month) +
+  labs(
+    title = "Median Ride Duration by Weekdays, Month, and Year",
+    x = "Weekdays",
+    y = "Median Ride Duration",
+    fill = "Weekdays"
+  )  +
+  viridis::scale_fill_viridis(name = "Weekdays", 
+                               discrete = TRUE) + 
+  theme_minimal() + 
+  theme(legend.position = "bottom") 
 ```
 
 
@@ -225,3 +348,8 @@ In general, Men and women in all education panels share a similar activity patte
 ```{r}
 
 ```
+
+
+
+
+
