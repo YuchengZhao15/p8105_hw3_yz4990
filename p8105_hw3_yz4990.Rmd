@@ -5,10 +5,89 @@ date: "2024-10-12"
 output: md_document
 ---
 
-```{r setup, include=FALSE}
+```{r}
 library(tidyverse)
-
+library(p8105.datasets)
 ```
+
+## Problem 1
+
+```{r setup, include=FALSE}
+library(ggridges)
+library(patchwork)
+
+library(p8105.datasets)
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+
+```{r}
+data("ny_noaa")
+
+ny_noaa |>  
+  count(snow) |> 
+  arrange(desc(n))
+
+na_count = sum(rowSums(is.na(ny_noaa)) > 0)
+
+noaa_df = ny_noaa |>  
+  separate(date, into = c("year", "month", "day"), convert = TRUE) %>% 
+  mutate(
+    tmax = as.numeric(tmax),
+    tmin = as.numeric(tmin))
+```
+The data initially has `r ncol(ny_noaa)` variables and `r nrow(ny_noaa)` observations. The variables includes station id, date, precipitation, snow, snwd, maximum and minimum temperature. There are `r na_count` NA values in the original dataset. 
+
+0 is the most commonly observed value for snowfall because there is no snowfall in most days of the year. 
+
+
+plot of mean monthly temperature for each station across years for January and July
+```{r}
+noaa_df |>  
+  group_by(id, year, month) |>  
+  filter(month %in% c(1, 7)) |>  
+  summarize(mean_tmax = mean(tmax, na.rm = TRUE, color = id)) |>  
+  ggplot(aes(x = year, y = mean_tmax, group = id)) + 
+  geom_point() + 
+  geom_path() +
+  facet_grid(~month) +
+  labs(title = "Mean monthly temperature for each station across years for January and July")
+```
+The above plot shows the mean monthly temperature for each station across years for January and July. The mean of maximum temperature is higher for Juky than January, and the temperature recorded in each station tends to follow the same trend as each other. There are a few outliers for both January and July, such as 1980 to 1985 for January and 1985 to 1990 for July. 
+
+
+```{r}
+hex = 
+  noaa_df |>  
+  ggplot(aes(x = tmin, y = tmax)) + 
+  geom_hex()
+
+ridge = 
+  noaa_df |>  
+  filter(snow < 100, snow > 0) |> 
+  ggplot(aes(x = snow, y = as.factor(year))) + 
+  geom_density_ridges()
+
+hex + ridge
+```
+
 
 
 ## Problem 2
@@ -281,23 +360,6 @@ cb_df |>
 The plot shows that the median duration of ride tends to be higher in year 2020 compared to 2024 for both July and January. July has higher median ride duration than January for both years, potentially indicating that people are more willing to ride at warmer days. The highest median ride duration in the weekdays occurs on Saturday and Sunday most of the time, except on January 2024, suggesting that most people tend to take longer rides during the weekends. 
 
 
-
-demo_df |> 
-  select(sex, age, education) |> 
-  ggplot(aes(x = age, fill = sex)) +
-  geom_density(alpha = 0.4, adjust = .5) + 
-  facet_grid(~ education, labeller = 
-               as_labeller(c("1" = "Less than high school",
-                             "2" = "High school equivalent",
-                             "3" = "More than high school"))) +
-  scale_fill_discrete(labels = c("Male", "Female")) + 
-  labs(
-    title = "Age Distribution by Sex within Education Categories",
-    x = "Age",
-    y = "Density",
-    fill = "Sex"
-  ) +
-  theme_minimal() 
 
 There were relatively few electric Citi Bikes in 2020, but many more are available now. For data in 2024, make a figure that shows the impact of month, membership status, and bike type on the distribution of ride duration. Comment on your results.
 ```{r}
